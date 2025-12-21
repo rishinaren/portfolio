@@ -1,0 +1,158 @@
+:root {
+  color-scheme: dark;
+  --bg: #050607;
+  --bg-deep: #020404;
+  --ink: #d6ffe0;
+  --muted: #7fd7a1;
+  --accent: #d6ffe0;
+  --border: rgba(83, 161, 123, 0.2);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "IBM Plex Mono", "Cascadia Mono", "Consolas", monospace;
+  background: #050607;
+  color: var(--ink);
+  padding: 0;
+}
+
+a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.08));
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.12) 3px
+  );
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.terminal {
+  width: 100vw;
+  min-height: 100vh;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 28px 36px 24px;
+  position: relative;
+  line-height: 1.6;
+}
+
+.terminal__output {
+  width: 100%;
+}
+
+.terminal__line {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.terminal__line--muted {
+  color: var(--muted);
+}
+
+.terminal__line--accent {
+  color: var(--accent);
+}
+
+.terminal__input-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  padding-top: 2px;
+}
+
+.terminal__prompt {
+  color: var(--accent);
+  margin-right: 0;
+}
+
+.terminal__input {
+  display: inline-block;
+  flex: 0 1 auto;
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  min-height: 1.4em;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  cursor: text;
+  caret-color: transparent;
+}
+
+.terminal__input:empty::before {
+  content: "";
+}
+
+.terminal__caret {
+  display: inline-block;
+  width: 11px;
+  height: 3px;
+  background: #f5f7f8;
+  margin-left: 0;
+  vertical-align: baseline;
+  position: relative;
+  top: 0.2em;
+  animation: blink 1s steps(1, end) infinite;
+}
+
+.terminal__input[contenteditable="false"] + .terminal__caret {
+  opacity: 0;
+}
+
+.terminal__input-line:focus-within .terminal__caret {
+  opacity: 1;
+}
+
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .terminal {
+    padding: 20px 18px 14px;
+    min-height: 100vh;
+  }
+
+  .terminal__input {
+    font-size: 0.95rem;
+  }
+}
