@@ -8,7 +8,6 @@ const promptText = "C:\\Users\\guest>";
 const resumeUrl =
   "https://drive.google.com/file/d/1CbptF0EKWF35iLluC2RKUCbOoD_UD56Z/view?usp=sharing";
 const githubUrl = "https://github.com/rishinaren";
-const emailPageUrl = "email.html";
 
 const educationLines = [
   "Education",
@@ -145,7 +144,7 @@ const printHelp = () => {
       "help - show this list",
       "resume - open resume PDF",
       "github - open GitHub profile",
-      "email - contact by email",
+      "email - show contact email",
       "projects - view projects",
       "work - view work experience",
       "education - view education",
@@ -187,10 +186,7 @@ const runCommand = (rawInput) => {
   }
 
   if (normalized === "email") {
-    appendLine("Opening email...");
-    setTimeout(() => {
-      window.location.href = emailPageUrl;
-    }, 300);
+    appendLine("rnarendran3@gatech.edu");
     return;
   }
 
