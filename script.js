@@ -7,7 +7,7 @@ const promptEl = document.getElementById("prompt");
 const promptText = "C:\\Users\\guest>";
 
 const resumeUrl =
-  "https://drive.google.com/file/d/1XesM-N3miH1b21egvrnBbhtgUper6jVD/view?usp=sharing";
+  "https://drive.google.com/file/d/1pjBGBpr7HmEgBGypFNRuDYdV3TAIpI7C/view?usp=sharing";
 const githubUrl = "https://github.com/rishinaren";
 const email = "rnarendran3@gatech.edu";
 const phoneDisplay = "(678) 756-7718";
