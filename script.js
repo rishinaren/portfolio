@@ -1,240 +1,423 @@
-// Terminal portfolio — Rishi Narendran
-const output = document.getElementById("output");
-const input = document.getElementById("command-input");
-const inputLine = document.getElementById("input-line");
-const promptEl = document.getElementById("prompt");
+// Rishi Code — terminal core (welcome screen, command registry, menu engine)
+(function () {
+  "use strict";
 
-const promptText = "C:\\Users\\guest>";
+  const scrollback = document.getElementById("scrollback");
+  const inputLine = document.getElementById("input-line");
+  const cmd = document.getElementById("cmd");
+  const promptText = ">";
 
-const resumeUrl =
-  "https://drive.google.com/file/d/1pjBGBpr7HmEgBGypFNRuDYdV3TAIpI7C/view?usp=sharing";
-const githubUrl = "https://github.com/rishinaren";
-const email = "rnarendran3@gatech.edu";
-const phoneDisplay = "(678) 756-7718";
-const phoneHref = "tel:+16787567718";
+  const resumeUrl =
+    "https://drive.google.com/file/d/1pjBGBpr7HmEgBGypFNRuDYdV3TAIpI7C/view?usp=sharing";
+  const githubUrl = "https://github.com/rishinaren";
+  const email = "rnarendran3@gatech.edu";
+  const phoneDisplay = "(678) 756-7718";
+  const phoneHref = "tel:+16787567718";
 
-const COMMANDS = ["help", "resume", "github", "contact", "phone"];
-
-const introText = "Rishi Narendran — Computer Engineering @ Georgia Tech";
-
-// ---- DOM helpers ----
-const scrollToBottom = () => window.scrollTo(0, document.body.scrollHeight);
-
-const appendLine = (text = "", variant) => {
-  const line = document.createElement("div");
-  line.className = "terminal__line";
-  if (variant) {
-    line.classList.add(`terminal__line--${variant}`);
-  }
-  line.textContent = text;
-  output.insertBefore(line, inputLine);
-  scrollToBottom();
-  return line;
-};
-
-const appendLink = (prefix, text, href, newTab) => {
-  const line = document.createElement("div");
-  line.className = "terminal__line";
-  if (prefix) {
-    line.append(prefix);
-  }
-  const anchor = document.createElement("a");
-  anchor.href = href;
-  anchor.textContent = text;
-  if (newTab) {
-    anchor.target = "_blank";
-    anchor.rel = "noopener noreferrer";
-  }
-  line.appendChild(anchor);
-  output.insertBefore(line, inputLine);
-  scrollToBottom();
-  return line;
-};
-
-const echoCommand = (command) => {
-  const line = document.createElement("div");
-  line.className = "terminal__line";
-  const promptSpan = document.createElement("span");
-  promptSpan.className = "terminal__prompt";
-  promptSpan.textContent = promptText;
-  line.appendChild(promptSpan);
-  line.appendChild(document.createTextNode(command));
-  output.insertBefore(line, inputLine);
-  scrollToBottom();
-  return line;
-};
-
-// ---- commands ----
-const printHelp = () => {
-  appendLine("Available commands:", "muted");
-  appendLine("");
-  [
-    ["help", "show this list"],
+  const COMMAND_LIST = [
+    ["help", "list commands"],
     ["resume", "open my resume"],
-    ["github", "open my GitHub profile"],
-    ["contact", "show my email address"],
-    ["phone", "show my phone number"],
-  ].forEach(([name, desc]) => appendLine(`  ${name.padEnd(10)}${desc}`));
-  appendLine("");
-};
+    ["github", "open my GitHub"],
+    ["contact", "show my email"],
+    ["phone", "show my phone"],
+    ["/art", "terminal art gallery"],
+    ["/game", "play terminal games"],
+  ];
 
-const openExternal = (label, url) => {
-  appendLine(`Opening ${label} in a new tab...`);
-  appendLine("If it does not open, use the link below:", "muted");
-  appendLink("", url, url, true);
-  window.open(url, "_blank", "noopener,noreferrer");
-};
+  const MASCOT = [
+    "     bbbb     ",
+    "   bbllllbb   ",
+    "  bbbbbbbbbb  ",
+    " bbbbbbbbbbbb ",
+    " bbddbbbbddbb ",
+    " bbbbbbbbbbbb ",
+    "  bbbbbbbbbb  ",
+    "  bb  bb  bb  ",
+  ];
 
-const runCommand = (raw) => {
-  const command = raw.trim();
-  echoCommand(command);
-  if (!command) {
-    return;
+  const commands = {};
+  const history = [];
+  let hIndex = 0;
+  let activeKeyHandler = null;
+
+  const scrollDown = () => window.scrollTo(0, document.body.scrollHeight);
+
+  function print(text, cls) {
+    const d = document.createElement("div");
+    d.className = "line";
+    if (cls) cls.split(" ").forEach((c) => c && d.classList.add(c));
+    d.textContent = text == null ? "" : text;
+    scrollback.appendChild(d);
+    scrollDown();
+    return d;
   }
 
-  switch (command.toLowerCase()) {
-    case "help":
-      printHelp();
-      break;
-    case "resume":
-      openExternal("resume", resumeUrl);
-      break;
-    case "github":
-      openExternal("GitHub", githubUrl);
-      break;
-    case "contact":
-      appendLink("Email: ", email, `mailto:${email}`, false);
-      break;
-    case "phone":
-      appendLink("Phone: ", phoneDisplay, phoneHref, false);
-      break;
-    default:
-      appendLine(
-        `'${command}' is not recognized. Type 'help' for a list of commands.`,
-        "muted"
+  function append(node) {
+    scrollback.appendChild(node);
+    scrollDown();
+    return node;
+  }
+
+  function printLink(prefix, text, href, newTab) {
+    const d = document.createElement("div");
+    d.className = "line";
+    if (prefix) d.append(prefix);
+    const a = document.createElement("a");
+    a.href = href;
+    a.textContent = text;
+    if (newTab) {
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+    }
+    d.appendChild(a);
+    scrollback.appendChild(d);
+    scrollDown();
+    return d;
+  }
+
+  function echo(command) {
+    const d = document.createElement("div");
+    d.className = "line echo";
+    const p = document.createElement("span");
+    p.className = "prompt";
+    p.textContent = promptText;
+    d.appendChild(p);
+    d.appendChild(document.createTextNode(" " + command));
+    scrollback.appendChild(d);
+    scrollDown();
+  }
+
+  // ---- caret / focus ----
+  function placeCaretEnd() {
+    cmd.focus();
+    const range = document.createRange();
+    range.selectNodeContents(cmd);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  function focusInput() {
+    if (activeKeyHandler) return;
+    placeCaretEnd();
+  }
+  function setInput(text) {
+    cmd.textContent = text;
+    placeCaretEnd();
+  }
+
+  // ---- takeover mode ----
+  function enterMode(el, keyHandler) {
+    inputLine.classList.add("hidden");
+    cmd.blur();
+    if (el) append(el);
+    activeKeyHandler = keyHandler;
+    scrollDown();
+  }
+  function exitMode() {
+    activeKeyHandler = null;
+    inputLine.classList.remove("hidden");
+    placeCaretEnd();
+    scrollDown();
+  }
+
+  // ---- menu engine (Claude Code /model style) ----
+  function openMenu(cfg) {
+    const options = cfg.options;
+    let idx = cfg.start || 0;
+
+    const wrap = document.createElement("div");
+    wrap.className = "menu";
+    const title = document.createElement("div");
+    title.className = "menu__title";
+    title.textContent = cfg.title;
+    wrap.appendChild(title);
+
+    const rows = options.map((opt, i) => {
+      const row = document.createElement("div");
+      row.className = "menu__opt";
+      const arrow = document.createElement("span");
+      arrow.className = "arrow";
+      const num = document.createElement("span");
+      num.className = "num";
+      num.textContent = i + 1 + ".";
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = opt.label;
+      const note = document.createElement("span");
+      note.className = "note";
+      note.textContent = opt.note || "";
+      row.append(arrow, num, label, note);
+      row.addEventListener("mousemove", () => {
+        if (idx !== i) {
+          idx = i;
+          render();
+        }
+      });
+      row.addEventListener("click", () => {
+        idx = i;
+        render();
+        select();
+      });
+      wrap.appendChild(row);
+      return { row, arrow };
+    });
+
+    const hint = document.createElement("div");
+    hint.className = "menu__hint";
+    hint.textContent = cfg.hint || "↑/↓ move · Enter select · Esc cancel";
+    wrap.appendChild(hint);
+
+    function render() {
+      rows.forEach((r, i) => {
+        r.row.classList.toggle("sel", i === idx);
+        r.arrow.textContent = i === idx ? "▸" : " ";
+      });
+    }
+    function collapse(text, cls) {
+      wrap.innerHTML = "";
+      const l = document.createElement("div");
+      l.className = "line " + (cls || "line--dim");
+      l.textContent = text;
+      wrap.appendChild(l);
+    }
+    function select() {
+      const chosen = options[idx];
+      collapse(cfg.title.replace(/[:?]\s*$/, "") + " → " + chosen.label);
+      exitMode();
+      cfg.onSelect(chosen, idx);
+    }
+    function cancel() {
+      collapse(cfg.title.replace(/[:?]\s*$/, "") + " (cancelled)");
+      exitMode();
+      if (cfg.onCancel) cfg.onCancel();
+    }
+    function key(e) {
+      if (e.key === "ArrowDown" || e.key === "j") {
+        e.preventDefault();
+        idx = (idx + 1) % options.length;
+        render();
+      } else if (e.key === "ArrowUp" || e.key === "k") {
+        e.preventDefault();
+        idx = (idx - 1 + options.length) % options.length;
+        render();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        select();
+      } else if (e.key === "Escape" || e.key === "q") {
+        e.preventDefault();
+        cancel();
+      } else if (/^[1-9]$/.test(e.key)) {
+        const n = +e.key - 1;
+        if (n < options.length) {
+          e.preventDefault();
+          idx = n;
+          render();
+          select();
+        }
+      }
+    }
+
+    render();
+    enterMode(wrap, key);
+  }
+
+  // ---- commands ----
+  function registerCommand(name, handler) {
+    commands[name.toLowerCase()] = handler;
+  }
+
+  function printHelp() {
+    print("Terminal Commands", "line--accent");
+    print("");
+    COMMAND_LIST.forEach(([c, d]) => print("  " + c.padEnd(12) + d));
+    print("  " + "clear".padEnd(12) + "clear the screen", "line--muted");
+    print("");
+  }
+
+  function openExternal(label, url) {
+    print("Opening " + label + " in a new tab...");
+    printLink("", url, url, true);
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  registerCommand("help", printHelp);
+  registerCommand("resume", () => openExternal("resume", resumeUrl));
+  registerCommand("github", () => openExternal("GitHub", githubUrl));
+  registerCommand("contact", () =>
+    printLink("Email: ", email, "mailto:" + email, false)
+  );
+  registerCommand("phone", () =>
+    printLink("Phone: ", phoneDisplay, phoneHref, false)
+  );
+  registerCommand("clear", () => {
+    scrollback.innerHTML = "";
+  });
+  registerCommand("welcome", renderWelcome);
+
+  function runCommand(raw) {
+    const input = raw.trim();
+    echo(input);
+    if (!input) return;
+    let name = input.split(/\s+/)[0].toLowerCase();
+    if (name[0] === "/") name = name.slice(1);
+    const args = input.split(/\s+/).slice(1);
+    const handler = commands[name];
+    if (handler) handler(args);
+    else
+      print(
+        "'" + input + "' is not recognized. Type 'help' for commands.",
+        "line--muted"
       );
   }
-};
 
-// ---- input handling ----
-const history = [];
-let historyIndex = 0;
-
-const placeCaretEnd = () => {
-  input.focus();
-  const range = document.createRange();
-  range.selectNodeContents(input);
-  range.collapse(false);
-  const selection = window.getSelection();
-  selection.removeAllRanges();
-  selection.addRange(range);
-};
-
-const setInput = (text) => {
-  input.textContent = text;
-  placeCaretEnd();
-};
-
-const submit = () => {
-  const value = input.textContent || "";
-  input.textContent = "";
-  const trimmed = value.trim();
-  if (trimmed) {
-    history.push(trimmed);
-  }
-  historyIndex = history.length;
-  runCommand(value);
-  input.focus();
-  scrollToBottom();
-};
-
-const autocomplete = () => {
-  const current = (input.textContent || "").trim().toLowerCase();
-  if (!current) {
-    return;
-  }
-  const matches = COMMANDS.filter((name) => name.startsWith(current));
-  if (matches.length === 1) {
-    setInput(matches[0]);
-  } else if (matches.length > 1) {
-    echoCommand(input.textContent);
-    appendLine(matches.join("    "), "muted");
-  }
-};
-
-input.addEventListener("keydown", (event) => {
-  switch (event.key) {
-    case "Enter":
-      event.preventDefault();
-      submit();
-      break;
-    case "ArrowUp":
-      event.preventDefault();
-      if (history.length) {
-        historyIndex = Math.max(0, historyIndex - 1);
-        setInput(history[historyIndex]);
+  // ---- welcome screen ----
+  function buildMascot() {
+    const wrap = document.createElement("div");
+    wrap.className = "mascot";
+    MASCOT.forEach((r) => {
+      const row = document.createElement("div");
+      row.className = "mascot__row";
+      for (const ch of r) {
+        const p = document.createElement("span");
+        p.className =
+          "px" +
+          (ch === "b" ? " px--b" : ch === "l" ? " px--l" : ch === "d" ? " px--d" : "");
+        row.appendChild(p);
       }
-      break;
-    case "ArrowDown":
-      event.preventDefault();
-      if (history.length) {
-        historyIndex = Math.min(history.length, historyIndex + 1);
-        setInput(historyIndex === history.length ? "" : history[historyIndex]);
-      }
-      break;
-    case "Tab":
-      event.preventDefault();
-      autocomplete();
-      break;
-    default:
-      break;
+      wrap.appendChild(row);
+    });
+    return wrap;
   }
-});
 
-input.addEventListener("paste", (event) => {
-  event.preventDefault();
-  const text = event.clipboardData.getData("text/plain").replace(/\s+/g, " ");
-  setInput(`${input.textContent || ""}${text}`);
-});
+  function renderWelcome() {
+    const box = document.createElement("div");
+    box.className = "welcome";
 
-document.addEventListener("click", (event) => {
-  if (event.target.closest("a")) {
-    return;
+    const title = document.createElement("div");
+    title.className = "welcome__title";
+    title.textContent = "Rishi Code v1.0";
+    box.appendChild(title);
+
+    const left = document.createElement("div");
+    left.className = "welcome__left";
+    const hi = document.createElement("div");
+    hi.className = "welcome__hi";
+    hi.textContent = "Hi Viewer!";
+    left.appendChild(hi);
+    left.appendChild(buildMascot());
+    const footer = document.createElement("div");
+    footer.className = "welcome__footer";
+    const f1 = document.createElement("div");
+    f1.textContent = "Computer Engineering · Georgia Tech";
+    const f2 = document.createElement("div");
+    f2.className = "path";
+    f2.textContent = "~\\Rishi Code";
+    footer.append(f1, f2);
+    left.appendChild(footer);
+
+    const right = document.createElement("div");
+    right.className = "welcome__right";
+    const h = document.createElement("div");
+    h.className = "welcome__h";
+    h.textContent = "Terminal Commands";
+    right.appendChild(h);
+    const grid = document.createElement("div");
+    grid.className = "welcome__cmds";
+    COMMAND_LIST.forEach(([c, d]) => {
+      const cc = document.createElement("span");
+      cc.className = "welcome__cmd";
+      cc.textContent = c;
+      const dd = document.createElement("span");
+      dd.className = "welcome__desc";
+      dd.textContent = d;
+      grid.append(cc, dd);
+    });
+    right.appendChild(grid);
+
+    box.append(left, right);
+    append(box);
   }
-  const selection = window.getSelection();
-  if (selection && selection.toString().length > 0) {
-    return;
-  }
-  if (event.target === input) {
-    return;
-  }
-  placeCaretEnd();
-});
 
-// ---- boot ----
-const bootIntro = () => {
-  input.setAttribute("contenteditable", "false");
-  inputLine.style.display = "none";
-  const line = appendLine("", "accent");
-  let index = 0;
-
-  const step = () => {
-    line.textContent = introText.slice(0, index);
-    index += 1;
-    if (index <= introText.length) {
-      setTimeout(step, 24);
-    } else {
-      appendLine("Type 'help' to see the list of commands.", "muted");
-      appendLine("");
-      inputLine.style.display = "";
-      input.setAttribute("contenteditable", "true");
-      input.focus();
-      scrollToBottom();
+  // ---- global input handling ----
+  document.addEventListener("keydown", (e) => {
+    if (activeKeyHandler) {
+      activeKeyHandler(e);
+      return;
     }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submit();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (history.length) {
+        hIndex = Math.max(0, hIndex - 1);
+        setInput(history[hIndex]);
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (history.length) {
+        hIndex = Math.min(history.length, hIndex + 1);
+        setInput(hIndex === history.length ? "" : history[hIndex]);
+      }
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      complete();
+    }
+  });
+
+  cmd.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData("text/plain").replace(/\s+/g, " ");
+    setInput((cmd.textContent || "") + text);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("a")) return;
+    if (e.target.closest(".menu, .game, .stage")) return;
+    if (activeKeyHandler) return;
+    const sel = window.getSelection();
+    if (sel && sel.toString().length > 0) return;
+    if (e.target === cmd) return;
+    placeCaretEnd();
+  });
+
+  function submit() {
+    const val = cmd.textContent || "";
+    cmd.textContent = "";
+    const t = val.trim();
+    if (t) history.push(t);
+    hIndex = history.length;
+    runCommand(val);
+    focusInput();
+  }
+
+  function complete() {
+    const cur = (cmd.textContent || "").trim();
+    if (!cur) return;
+    const slash = cur[0] === "/";
+    const bare = slash ? cur.slice(1) : cur;
+    const names = Object.keys(commands).filter((n) => n.startsWith(bare.toLowerCase()));
+    if (names.length === 1) setInput((slash ? "/" : "") + names[0]);
+  }
+
+  // ---- expose API for skills (art.js, games.js) ----
+  window.RC = {
+    print,
+    printLink,
+    append,
+    echo,
+    enterMode,
+    exitMode,
+    openMenu,
+    registerCommand,
+    focusInput,
+    scrollDown,
   };
 
-  step();
-};
-
-promptEl.textContent = promptText;
-bootIntro();
+  // ---- boot ----
+  renderWelcome();
+  print("Type a command, or try /art and /game.", "line--dim");
+  print("");
+  placeCaretEnd();
+})();
