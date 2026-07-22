@@ -3,8 +3,10 @@
   "use strict";
 
   const scrollback = document.getElementById("scrollback");
+  const inputArea = document.getElementById("input-area");
   const inputLine = document.getElementById("input-line");
   const cmd = document.getElementById("cmd");
+  const ghost = document.getElementById("ghost");
   const promptText = ">";
 
   const resumeUrl =
@@ -101,14 +103,18 @@
     if (activeKeyHandler) return;
     placeCaretEnd();
   }
+  function updateGhost() {
+    ghost.style.display = cmd.textContent && cmd.textContent.length ? "none" : "";
+  }
   function setInput(text) {
     cmd.textContent = text;
     placeCaretEnd();
+    updateGhost();
   }
 
   // ---- takeover mode ----
   function enterMode(el, keyHandler) {
-    inputLine.classList.add("hidden");
+    inputArea.classList.add("hidden");
     cmd.blur();
     if (el) append(el);
     activeKeyHandler = keyHandler;
@@ -116,8 +122,9 @@
   }
   function exitMode() {
     activeKeyHandler = null;
-    inputLine.classList.remove("hidden");
+    inputArea.classList.remove("hidden");
     placeCaretEnd();
+    updateGhost();
     scrollDown();
   }
 
@@ -372,6 +379,8 @@
     setInput((cmd.textContent || "") + text);
   });
 
+  cmd.addEventListener("input", updateGhost);
+
   document.addEventListener("click", (e) => {
     if (e.target.closest("a")) return;
     if (e.target.closest(".menu, .game, .stage")) return;
@@ -390,6 +399,7 @@
     hIndex = history.length;
     runCommand(val);
     focusInput();
+    updateGhost();
   }
 
   function complete() {
@@ -417,7 +427,6 @@
 
   // ---- boot ----
   renderWelcome();
-  print("Type a command, or try /art and /game.", "line--dim");
-  print("");
   placeCaretEnd();
+  updateGhost();
 })();

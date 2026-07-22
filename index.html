@@ -19,17 +19,23 @@
   <body>
     <main class="screen" id="screen" role="main">
       <div class="scrollback" id="scrollback" aria-live="polite" aria-atomic="false"></div>
-      <div class="prompt-line" id="input-line">
-        <span class="prompt" id="prompt">&gt;</span><span
-          id="cmd"
-          class="cmd"
-          contenteditable="true"
-          role="textbox"
-          spellcheck="false"
-          autocapitalize="none"
-          autocorrect="off"
-          aria-label="Terminal command input"
-        ></span><span class="caret" aria-hidden="true"></span>
+      <div id="input-area">
+        <div class="prompt-line" id="input-line"><span class="prompt" id="prompt">&gt;</span><span
+            id="cmd"
+            class="cmd"
+            contenteditable="true"
+            role="textbox"
+            spellcheck="false"
+            autocapitalize="none"
+            autocorrect="off"
+            aria-label="Terminal command input"
+          ></span><span class="caret" aria-hidden="true"></span><span
+            class="ghost"
+            id="ghost"
+          >Type a command, or try /art and /game.</span></div>
+        <div class="statusbar">
+          type <b>help</b> for commands · <b>q</b> exits art &amp; games
+        </div>
       </div>
     </main>
     <script src="script.js"></script>
