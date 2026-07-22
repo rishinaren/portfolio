@@ -1,4 +1,5 @@
-// Rishi Code — /game skill: Dino runner, Chess, Rubik's cube (ports of the linked repos)
+// Rishi Code — /game skill: Dino runner, Chess (+ bot), playable Rubik's Cube
+// Ports of the linked repos: termrex, chess-tui, ratty's rubiks_cube.
 (function () {
   "use strict";
 
@@ -83,7 +84,6 @@
     function draw() {
       ctx.fillStyle = "#0a0806";
       ctx.fillRect(0, 0, c.width, c.height);
-      // ground
       ctx.strokeStyle = "#6f6358";
       ctx.beginPath();
       ctx.moveTo(0, groundY + 2);
@@ -92,19 +92,17 @@
       ctx.fillStyle = "#4a4139";
       for (let x = -((Math.floor(score * (speed / 5)) * 2) % 40); x < c.width; x += 40)
         ctx.fillRect(x, groundY + 6, 14, 2);
-      // dino
       const b = box();
       ctx.fillStyle = "#e4d7cc";
       ctx.fillRect(b.x, b.y, b.w, b.h);
       ctx.fillStyle = "#0a0806";
-      ctx.fillRect(b.x + b.w - (d.duck ? 12 : 9), b.y + 6, 4, 4); // eye
+      ctx.fillRect(b.x + b.w - (d.duck ? 12 : 9), b.y + 6, 4, 4);
       ctx.fillStyle = "#e4d7cc";
       if (!d.duck) {
-        ctx.fillRect(b.x + b.w, b.y + 8, 8, 12); // snout
-        ctx.fillRect(b.x + 4, b.y + b.h, 8, 6); // leg
+        ctx.fillRect(b.x + b.w, b.y + 8, 8, 12);
+        ctx.fillRect(b.x + 4, b.y + b.h, 8, 6);
         ctx.fillRect(b.x + b.w - 14, b.y + b.h, 8, 6);
       }
-      // obstacles
       for (const o of obstacles) {
         if (o.type === "cactus") {
           ctx.fillStyle = "#6cc07a";
@@ -114,12 +112,11 @@
         } else {
           ctx.fillStyle = "#d97757";
           const up = Math.floor(o.f) % 2 === 0;
-          ctx.fillRect(o.x + 6, o.y + 6, 22, 6); // body
-          ctx.fillRect(o.x, o.y + (up ? 0 : 12), 12, 6); // wing
-          ctx.fillRect(o.x + 24, o.y + 8, 10, 4); // beak
+          ctx.fillRect(o.x + 6, o.y + 6, 22, 6);
+          ctx.fillRect(o.x, o.y + (up ? 0 : 12), 12, 6);
+          ctx.fillRect(o.x + 24, o.y + 8, 10, 4);
         }
       }
-      // score
       ctx.fillStyle = "#9a8b7e";
       ctx.font = "16px monospace";
       ctx.textAlign = "right";
@@ -184,9 +181,21 @@
   }
 
   // ======================================================================
-  // CHESS  (port of github.com/thomas-mauran/chess-tui — local 2-player)
+  // CHESS  (port of github.com/thomas-mauran/chess-tui) — 2-player or vs bot
   // ======================================================================
   function chess() {
+    RC.openMenu({
+      title: "Chess — choose mode",
+      options: [
+        { label: "Vs Computer", note: "— you play White", ai: "b" },
+        { label: "2 Player", note: "— local hot-seat", ai: null },
+      ],
+      onSelect: (opt) => startChess(opt.ai),
+      onCancel: () => RC.print("game closed.", "line--dim"),
+    });
+  }
+
+  function startChess(aiColor) {
     const GLYPH = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", k: "♚" };
     const wrap = document.createElement("div");
     wrap.className = "game";
@@ -197,12 +206,12 @@
     const bar = document.createElement("div");
     bar.className = "game__bar";
     bar.textContent =
-      "click a piece then a square  ·  arrows + space also work  ·  q quits";
+      (aiColor ? "you (White) vs Computer  ·  " : "") +
+      "click a piece then a square  ·  arrows + space  ·  q quits";
     wrap.append(boardEl, status, bar);
 
-    const start =
-      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
-    let board, turn, rights, ep, cursor, sel, legal, done;
+    const start = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+    let board, turn, rights, ep, cursor, sel, legal, done, thinking;
 
     function parse() {
       board = [];
@@ -211,11 +220,7 @@
         const row = [];
         for (const ch of rows[r]) {
           if (/\d/.test(ch)) for (let k = 0; k < +ch; k++) row.push(null);
-          else
-            row.push({
-              t: ch.toLowerCase(),
-              c: ch === ch.toLowerCase() ? "b" : "w",
-            });
+          else row.push({ t: ch.toLowerCase(), c: ch === ch.toLowerCase() ? "b" : "w" });
         }
         board.push(row);
       }
@@ -226,16 +231,16 @@
       sel = null;
       legal = [];
       done = false;
+      thinking = false;
     }
     const inb = (r, c) => r >= 0 && r < 8 && c >= 0 && c < 8;
     const opp = (c) => (c === "w" ? "b" : "w");
     const clone = (b) => b.map((row) => row.map((p) => (p ? { t: p.t, c: p.c } : null)));
 
     function attacked(b, r, c, by) {
-      const pd = by === "w" ? 1 : -1; // white pawns sit "below" and attack upward (r-1)
+      const pd = by === "w" ? 1 : -1;
       for (const dc of [-1, 1]) {
-        const pr = r + pd,
-          pc = c + dc;
+        const pr = r + pd, pc = c + dc;
         if (inb(pr, pc)) {
           const p = b[pr][pc];
           if (p && p.c === by && p.t === "p") return true;
@@ -250,10 +255,7 @@
         let rr = r + dr, cc = c + dc;
         while (inb(rr, cc)) {
           const p = b[rr][cc];
-          if (p) {
-            if (p.c === by && (p.t === "b" || p.t === "q")) return true;
-            break;
-          }
+          if (p) { if (p.c === by && (p.t === "b" || p.t === "q")) return true; break; }
           rr += dr; cc += dc;
         }
       }
@@ -261,10 +263,7 @@
         let rr = r + dr, cc = c + dc;
         while (inb(rr, cc)) {
           const p = b[rr][cc];
-          if (p) {
-            if (p.c === by && (p.t === "r" || p.t === "q")) return true;
-            break;
-          }
+          if (p) { if (p.c === by && (p.t === "r" || p.t === "q")) return true; break; }
           rr += dr; cc += dc;
         }
       }
@@ -316,7 +315,6 @@
           const tr = r + dr, tc = c + dc;
           if (inb(tr, tc) && (!b[tr][tc] || b[tr][tc].c !== p.c)) add(tr, tc, {});
         }
-        // castling
         const homeRow = p.c === "w" ? 7 : 0;
         if (r === homeRow && c === 4 && !attacked(b, r, c, opp(p.c))) {
           const kSide = p.c === "w" ? rts.wK : rts.bK;
@@ -332,19 +330,14 @@
         }
       } else {
         const dirs =
-          p.t === "b"
-            ? [[-1,-1],[-1,1],[1,-1],[1,1]]
-            : p.t === "r"
-            ? [[-1,0],[1,0],[0,-1],[0,1]]
-            : [[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]];
+          p.t === "b" ? [[-1,-1],[-1,1],[1,-1],[1,1]]
+          : p.t === "r" ? [[-1,0],[1,0],[0,-1],[0,1]]
+          : [[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]];
         for (const [dr, dc] of dirs) {
           let tr = r + dr, tc = c + dc;
           while (inb(tr, tc)) {
             if (!b[tr][tc]) add(tr, tc, {});
-            else {
-              if (b[tr][tc].c !== p.c) add(tr, tc, {});
-              break;
-            }
+            else { if (b[tr][tc].c !== p.c) add(tr, tc, {}); break; }
             tr += dr; tc += dc;
           }
         }
@@ -362,7 +355,6 @@
       if (m.castle === "K") { b[m.tr][5] = b[m.tr][7]; b[m.tr][7] = null; }
       if (m.castle === "Q") { b[m.tr][3] = b[m.tr][0]; b[m.tr][0] = null; }
       if (p.t === "p" && (m.tr === 0 || m.tr === 7)) p.t = "q";
-      // rights
       if (p.t === "k") {
         if (p.c === "w") { st.rights.wK = st.rights.wQ = false; }
         else { st.rights.bK = st.rights.bQ = false; }
@@ -390,9 +382,85 @@
     function anyLegal(col) {
       for (let r = 0; r < 8; r++)
         for (let c = 0; c < 8; c++)
-          if (board[r][c] && board[r][c].c === col && legalFrom(r, c).length)
-            return true;
+          if (board[r][c] && board[r][c].c === col && legalFrom(r, c).length) return true;
       return false;
+    }
+
+    // ---- simple bot: minimax + alpha-beta ----
+    const VAL = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+    function evalBoard(b) {
+      let s = 0;
+      for (let r = 0; r < 8; r++)
+        for (let c = 0; c < 8; c++) {
+          const p = b[r][c];
+          if (!p) continue;
+          let v = VAL[p.t];
+          if (p.t === "p" || p.t === "n" || p.t === "b") {
+            v += (3.5 - Math.max(Math.abs(3.5 - r), Math.abs(3.5 - c))) * 6;
+          }
+          if (p.t === "p") v += (p.c === "w" ? 6 - r : r - 1) * 3;
+          s += p.c === "w" ? v : -v;
+        }
+      return s;
+    }
+    function genLegal(b, col, st) {
+      const out = [];
+      for (let r = 0; r < 8; r++)
+        for (let c = 0; c < 8; c++) {
+          const p = b[r][c];
+          if (!p || p.c !== col) continue;
+          for (const m of pseudo(b, r, c, st.ep, st.rights)) {
+            const b2 = clone(b);
+            const st2 = { ep: st.ep, rights: Object.assign({}, st.rights) };
+            apply(b2, m, st2);
+            if (!inCheck(b2, col)) {
+              m.cap = b[m.tr][m.tc] ? VAL[b[m.tr][m.tc].t] : 0;
+              out.push(m);
+            }
+          }
+        }
+      out.sort((a, z) => z.cap - a.cap); // captures first → better pruning
+      return out;
+    }
+    function search(b, col, st, depth, alpha, beta) {
+      if (depth === 0) return evalBoard(b);
+      const moves = genLegal(b, col, st);
+      if (!moves.length) return inCheck(b, col) ? (col === "w" ? -1e6 - depth : 1e6 + depth) : 0;
+      if (col === "w") {
+        let best = -Infinity;
+        for (const m of moves) {
+          const b2 = clone(b), st2 = { ep: st.ep, rights: Object.assign({}, st.rights) };
+          apply(b2, m, st2);
+          best = Math.max(best, search(b2, "b", st2, depth - 1, alpha, beta));
+          alpha = Math.max(alpha, best);
+          if (beta <= alpha) break;
+        }
+        return best;
+      }
+      let best = Infinity;
+      for (const m of moves) {
+        const b2 = clone(b), st2 = { ep: st.ep, rights: Object.assign({}, st.rights) };
+        apply(b2, m, st2);
+        best = Math.min(best, search(b2, "w", st2, depth - 1, alpha, beta));
+        beta = Math.min(beta, best);
+        if (beta <= alpha) break;
+      }
+      return best;
+    }
+    const DEPTH = 3;
+    function aiMove() {
+      const st = { ep: ep, rights: Object.assign({}, rights) };
+      const moves = genLegal(board, aiColor, st);
+      if (!moves.length) { setStatus(); render(); return; }
+      let best = null, bestVal = aiColor === "w" ? -Infinity : Infinity;
+      for (const m of moves) {
+        const b2 = clone(board), st2 = { ep: ep, rights: Object.assign({}, rights) };
+        apply(b2, m, st2);
+        const val = search(b2, opp(aiColor), st2, DEPTH - 1, -Infinity, Infinity);
+        const better = aiColor === "w" ? val > bestVal : val < bestVal;
+        if (better || (val === bestVal && Math.random() < 0.25)) { bestVal = val; best = m; }
+      }
+      move(best || moves[0]);
     }
 
     function setStatus() {
@@ -404,7 +472,6 @@
         status.textContent = check
           ? "Checkmate — " + (turn === "w" ? "Black" : "White") + " wins!  (type /game to play again)"
           : "Stalemate — draw.  (type /game to play again)";
-        status.className = "chess-status";
         status.style.color = "#f0a882";
         return;
       }
@@ -422,22 +489,25 @@
       legal = [];
       setStatus();
       render();
+      if (aiColor && turn === aiColor && !done) {
+        thinking = true;
+        status.textContent = "Computer is thinking…";
+        status.style.color = "#9a8b7e";
+        setTimeout(() => {
+          try { aiMove(); } finally { thinking = false; }
+        }, 220);
+      }
     }
 
     function activate(r, c) {
-      if (done) return;
+      if (done || thinking || (aiColor && turn === aiColor)) return;
       if (sel) {
         const m = legal.find((x) => x.tr === r && x.tc === c);
         if (m) { move(m); return; }
       }
       const p = board[r][c];
-      if (p && p.c === turn) {
-        sel = { r, c };
-        legal = legalFrom(r, c);
-      } else {
-        sel = null;
-        legal = [];
-      }
+      if (p && p.c === turn) { sel = { r, c }; legal = legalFrom(r, c); }
+      else { sel = null; legal = []; }
       render();
     }
 
@@ -458,18 +528,13 @@
             s.textContent = GLYPH[p.t];
             sq.appendChild(s);
           }
-          sq.addEventListener("click", () => {
-            cursor = { r, c };
-            activate(r, c);
-          });
+          sq.addEventListener("click", () => { cursor = { r, c }; activate(r, c); });
           boardEl.appendChild(sq);
         }
       }
     }
 
-    function stop() {
-      RC.exitMode();
-    }
+    function stop() { RC.exitMode(); }
 
     parse();
     RC.enterMode(wrap, (e) => {
@@ -485,82 +550,190 @@
   }
 
   // ======================================================================
-  // RUBIK'S CUBE  (port of ratty's rubiks_cube.rs — colors + view angles)
+  // RUBIK'S CUBE  (playable — port of ratty's rubiks_cube.rs colors/angles)
+  // scramble → timer → keyboard face turns → solve
   // ======================================================================
   function cube() {
     const wrap = document.createElement("div");
     wrap.className = "game";
     const c = document.createElement("canvas");
-    c.width = 340;
+    c.width = 320;
     c.height = 300;
     wrap.appendChild(c);
+    const status = document.createElement("div");
+    status.className = "chess-status";
     const bar = document.createElement("div");
     bar.className = "game__bar";
-    bar.textContent = "auto-rotating cube  ·  ←/→ spin speed  ·  space pause  ·  q quits";
-    wrap.appendChild(bar);
+    bar.textContent =
+      "U D L R F B turn faces  ·  Shift reverses  ·  arrows orbit  ·  n new  ·  q quits";
+    wrap.append(status, bar);
     const ctx = c.getContext("2d");
 
-    // ratty palette
+    // ratty palette + face normals
     const COL = {
       U: "rgb(242,242,242)", D: "rgb(255,213,0)", F: "rgb(0,155,72)",
       B: "rgb(0,70,173)", R: "rgb(183,18,52)", L: "rgb(255,88,0)",
     };
-    const FACES = [
-      { k: "R", n: [1, 0, 0], u: [0, 1, 0], v: [0, 0, 1] },
-      { k: "L", n: [-1, 0, 0], u: [0, 1, 0], v: [0, 0, 1] },
-      { k: "U", n: [0, 1, 0], u: [1, 0, 0], v: [0, 0, 1] },
-      { k: "D", n: [0, -1, 0], u: [1, 0, 0], v: [0, 0, 1] },
-      { k: "F", n: [0, 0, 1], u: [1, 0, 0], v: [0, 1, 0] },
-      { k: "B", n: [0, 0, -1], u: [1, 0, 0], v: [0, 1, 0] },
-    ];
-    // build stickers
-    const stickers = [];
-    const GAP = 0.30, SPAN = 0.66;
-    for (const f of FACES) {
-      for (let i = -1; i <= 1; i++)
-        for (let j = -1; j <= 1; j++) {
-          const center = [
-            f.n[0] + f.u[0] * i * SPAN + f.v[0] * j * SPAN,
-            f.n[1] + f.u[1] * i * SPAN + f.v[1] * j * SPAN,
-            f.n[2] + f.u[2] * i * SPAN + f.v[2] * j * SPAN,
-          ];
-          const corners = [];
-          for (const [su, sv] of [[-1,-1],[1,-1],[1,1],[-1,1]])
-            corners.push([
-              center[0] + (f.u[0] * su + f.v[0] * sv) * GAP,
-              center[1] + (f.u[1] * su + f.v[1] * sv) * GAP,
-              center[2] + (f.u[2] * su + f.v[2] * sv) * GAP,
-            ]);
-          stickers.push({ n: f.n, corners, color: COL[f.k] });
-        }
+    const FN = {
+      U: [0, 1, 0], D: [0, -1, 0], F: [0, 0, 1],
+      B: [0, 0, -1], R: [1, 0, 0], L: [-1, 0, 0],
+    };
+    const MOVES = {
+      U: { axis: "y", sign: 1, dir: -1 }, D: { axis: "y", sign: -1, dir: 1 },
+      R: { axis: "x", sign: 1, dir: -1 }, L: { axis: "x", sign: -1, dir: 1 },
+      F: { axis: "z", sign: 1, dir: -1 }, B: { axis: "z", sign: -1, dir: 1 },
+    };
+    const IDX = { x: 0, y: 1, z: 2 };
+    const HS = 0.45;
+
+    function perpAxes(N) {
+      if (N[0]) return [[0, 1, 0], [0, 0, 1]];
+      if (N[1]) return [[1, 0, 0], [0, 0, 1]];
+      return [[1, 0, 0], [0, 1, 0]];
+    }
+    function rotAxis(v, axis, a) {
+      const s = Math.sin(a), co = Math.cos(a);
+      const [x, y, z] = v;
+      if (axis === "x") return [x, y * co - z * s, y * s + z * co];
+      if (axis === "y") return [x * co + z * s, y, -x * s + z * co];
+      return [x * co - y * s, x * s + y * co, z];
     }
 
-    let yaw = -0.58, pitch = 0.42, spin = 0.02, paused = false, raf = null;
+    let stickers, view, spinRaf, anim, queue, phase, tStart, tEnd, moves;
+    let yaw = -0.62, pitch = -0.5;
 
-    function rot(p) {
-      let [x, y, z] = p;
-      let cx = Math.cos(pitch), sx = Math.sin(pitch);
-      let y1 = y * cx - z * sx, z1 = y * sx + z * cx;
-      let cy = Math.cos(yaw), sy = Math.sin(yaw);
-      let x1 = x * cy + z1 * sy, z2 = -x * sy + z1 * cy;
-      return [x1, y1, z2];
+    function buildSolved() {
+      stickers = [];
+      for (const k in FN) {
+        const N = FN[k];
+        const [u, v] = perpAxes(N);
+        for (let i = -1; i <= 1; i++)
+          for (let j = -1; j <= 1; j++) {
+            stickers.push({
+              c: [N[0] * 1.5 + u[0] * i + v[0] * j,
+                  N[1] * 1.5 + u[1] * i + v[1] * j,
+                  N[2] * 1.5 + u[2] * i + v[2] * j],
+              n: N.slice(),
+              col: COL[k],
+            });
+          }
+      }
     }
-    function project(p) {
-      const d = 5, f = 340;
-      const s = f / (d - p[2]);
-      return [c.width / 2 + p[0] * s, c.height / 2 - p[1] * s, p[2]];
+    const inLayer = (s, mv) => s.c[IDX[mv.axis]] * mv.sign > 0.5;
+    function applyExact(mv, inv) {
+      const ang = (inv ? -1 : 1) * mv.dir * (Math.PI / 2);
+      for (const s of stickers) {
+        if (!inLayer(s, mv)) continue;
+        s.c = rotAxis(s.c, mv.axis, ang).map((x) => Math.round(x * 2) / 2);
+        s.n = rotAxis(s.n, mv.axis, ang).map((x) => Math.round(x));
+      }
     }
+    function solved() {
+      const groups = {};
+      for (const s of stickers) {
+        const key = s.n.map((x) => Math.round(x)).join(",");
+        (groups[key] = groups[key] || []).push(s.col);
+      }
+      for (const key in groups)
+        for (const col of groups[key]) if (col !== groups[key][0]) return false;
+      return Object.keys(groups).length === 6;
+    }
+
+    function enqueue(key, inv, dur) {
+      queue.push({ mv: MOVES[key], inv: inv, dur: dur });
+    }
+    function scramble() {
+      buildSolved();
+      queue = [];
+      const keys = Object.keys(MOVES);
+      let prev = null;
+      for (let i = 0; i < 22; i++) {
+        let k;
+        do { k = keys[Math.floor(Math.random() * keys.length)]; } while (k === prev);
+        prev = k;
+        enqueue(k, Math.random() < 0.5, 0.11);
+      }
+      phase = "scramble";
+      moves = 0;
+      tStart = 0;
+      tEnd = 0;
+      anim = null;
+    }
+    function startAnim(item) {
+      anim = { mv: item.mv, inv: item.inv, dur: item.dur, t0: performance.now() };
+    }
+
+    function fmt(ms) {
+      return (ms / 1000).toFixed(1) + "s";
+    }
+    function setStatus() {
+      if (phase === "scramble") {
+        status.textContent = "Scrambling…";
+        status.style.color = "#9a8b7e";
+      } else if (phase === "play") {
+        status.textContent =
+          "Time " + fmt(performance.now() - tStart) + "   ·   Moves " + moves;
+        status.style.color = "#e4d7cc";
+      } else if (phase === "solved") {
+        status.textContent =
+          "Solved in " + fmt(tEnd - tStart) + " · " + moves + " moves — nice! (n = new)";
+        status.style.color = "#f0a882";
+      }
+    }
+
+    function smooth(t) { return t * t * (3 - 2 * t); }
+
     function frame() {
-      if (!paused) yaw += spin;
+      // process queue
+      if (!anim && queue.length) startAnim(queue.shift());
+      let ang = 0;
+      if (anim) {
+        const p = Math.min(1, (performance.now() - anim.t0) / (anim.dur * 1000));
+        ang = (anim.inv ? -1 : 1) * anim.mv.dir * smooth(p) * (Math.PI / 2);
+        if (p >= 1) {
+          applyExact(anim.mv, anim.inv);
+          const fin = anim.mv;
+          anim = null;
+          if (phase === "play") moves++;
+          if (queue.length === 0 && phase === "scramble") {
+            phase = "play";
+            tStart = performance.now();
+            moves = 0;
+          } else if (phase === "play" && solved()) {
+            phase = "solved";
+            tEnd = performance.now();
+          }
+          void fin;
+        }
+      }
+
       ctx.fillStyle = "#0a0806";
       ctx.fillRect(0, 0, c.width, c.height);
+
+      const vrot = (v) => rotAxis(rotAxis(v, "x", pitch), "y", yaw);
+      const proj = (p) => {
+        const s = 320 / (5 - p[2]);
+        return [c.width / 2 + p[0] * s, c.height / 2 - p[1] * s, p[2]];
+      };
+
       const draws = [];
-      for (const st of stickers) {
-        const rn = rot(st.n);
-        if (rn[2] <= 0.02) continue; // backface cull
-        const pts = st.corners.map((p) => project(rot(p)));
+      for (const s of stickers) {
+        const [u, v] = perpAxes(s.n);
+        let corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [
+          s.c[0] + (u[0] * a + v[0] * b) * HS,
+          s.c[1] + (u[1] * a + v[1] * b) * HS,
+          s.c[2] + (u[2] * a + v[2] * b) * HS,
+        ]);
+        let nrm = s.n;
+        if (anim && inLayer(s, anim.mv)) {
+          corners = corners.map((p) => rotAxis(p, anim.mv.axis, ang));
+          nrm = rotAxis(s.n, anim.mv.axis, ang);
+        }
+        const nv = vrot(nrm);
+        if (nv[2] <= 0.03) continue; // backface cull
+        const pts = corners.map((p) => proj(vrot(p)));
         const depth = pts.reduce((a, p) => a + p[2], 0) / 4;
-        draws.push({ pts, color: st.color, depth, shade: rn[2] });
+        draws.push({ pts, col: s.col, depth, shade: nv[2] });
       }
       draws.sort((a, b) => a.depth - b.depth);
       for (const d of draws) {
@@ -568,42 +741,51 @@
         ctx.moveTo(d.pts[0][0], d.pts[0][1]);
         for (let i = 1; i < 4; i++) ctx.lineTo(d.pts[i][0], d.pts[i][1]);
         ctx.closePath();
-        ctx.fillStyle = d.color;
-        ctx.globalAlpha = 0.55 + 0.45 * Math.min(1, d.shade);
+        ctx.globalAlpha = 0.6 + 0.4 * Math.min(1, d.shade);
+        ctx.fillStyle = d.col;
         ctx.fill();
         ctx.globalAlpha = 1;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.strokeStyle = "#0a0806";
         ctx.stroke();
       }
-      raf = requestAnimationFrame(frame);
+
+      setStatus();
+      spinRaf = requestAnimationFrame(frame);
     }
+
     function stop() {
-      if (raf) cancelAnimationFrame(raf);
+      if (spinRaf) cancelAnimationFrame(spinRaf);
       RC.exitMode();
     }
+
+    scramble();
     RC.enterMode(wrap, (e) => {
-      if (e.key === "q" || e.key === "Escape") { e.preventDefault(); stop(); }
-      else if (e.key === " ") { e.preventDefault(); paused = !paused; }
-      else if (e.key === "ArrowRight") { e.preventDefault(); spin = Math.min(0.12, spin + 0.01); }
-      else if (e.key === "ArrowLeft") { e.preventDefault(); spin = Math.max(-0.12, spin - 0.01); }
+      const k = e.key;
+      if (k === "q" || k === "Escape") { e.preventDefault(); stop(); return; }
+      if (k === "n" || k === "N") { e.preventDefault(); scramble(); return; }
+      if (k === "ArrowLeft") { e.preventDefault(); yaw -= 0.12; return; }
+      if (k === "ArrowRight") { e.preventDefault(); yaw += 0.12; return; }
+      if (k === "ArrowUp") { e.preventDefault(); pitch -= 0.12; return; }
+      if (k === "ArrowDown") { e.preventDefault(); pitch += 0.12; return; }
+      const up = k.toUpperCase();
+      if (MOVES[up] && phase === "play" && queue.length < 3) {
+        e.preventDefault();
+        enqueue(up, k === up /* uppercase = reversed */, 0.2);
+      }
     });
     frame();
   }
 
   // ======================================================================
-  const GAMES = {
-    dino: dino,
-    chess: chess,
-    cube: cube,
-  };
+  const GAMES = { dino: dino, chess: chess, cube: cube };
   RC.registerCommand("game", () => {
     RC.openMenu({
       title: "/game — choose a game",
       options: [
         { label: "Dino Run", note: "— endless runner (termrex)", key: "dino" },
-        { label: "Chess", note: "— local 2-player (chess-tui)", key: "chess" },
-        { label: "Rubik's Cube", note: "— rotating cube (ratty)", key: "cube" },
+        { label: "Chess", note: "— vs computer or 2-player (chess-tui)", key: "chess" },
+        { label: "Rubik's Cube", note: "— scramble & solve (ratty)", key: "cube" },
       ],
       onSelect: (opt) => GAMES[opt.key](),
       onCancel: () => RC.print("game closed.", "line--dim"),

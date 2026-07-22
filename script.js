@@ -113,15 +113,20 @@
   }
 
   // ---- takeover mode ----
+  let currentModeEl = null;
   function enterMode(el, keyHandler) {
     inputArea.classList.add("hidden");
     cmd.blur();
     if (el) append(el);
+    currentModeEl = el || null;
     activeKeyHandler = keyHandler;
     scrollDown();
   }
-  function exitMode() {
+  function exitMode(keep) {
     activeKeyHandler = null;
+    if (!keep && currentModeEl && currentModeEl.parentNode)
+      currentModeEl.parentNode.removeChild(currentModeEl);
+    currentModeEl = null;
     inputArea.classList.remove("hidden");
     placeCaretEnd();
     updateGhost();
@@ -191,12 +196,12 @@
     function select() {
       const chosen = options[idx];
       collapse(cfg.title.replace(/[:?]\s*$/, "") + " → " + chosen.label);
-      exitMode();
+      exitMode(true);
       cfg.onSelect(chosen, idx);
     }
     function cancel() {
       collapse(cfg.title.replace(/[:?]\s*$/, "") + " (cancelled)");
-      exitMode();
+      exitMode(true);
       if (cfg.onCancel) cfg.onCancel();
     }
     function key(e) {
