@@ -344,6 +344,13 @@
 
     box.append(left, right);
     append(box);
+    syncWidth();
+  }
+
+  // keep the input box the same width as the welcome box
+  function syncWidth() {
+    const w = scrollback.querySelector(".welcome");
+    if (w) inputArea.style.width = w.getBoundingClientRect().width + "px";
   }
 
   // ---- global input handling ----
@@ -429,4 +436,6 @@
   renderWelcome();
   placeCaretEnd();
   updateGhost();
+  window.addEventListener("resize", syncWidth);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncWidth);
 })();
