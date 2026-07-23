@@ -1,7 +1,7 @@
 // Rishi Code — /art skill: animated ASCII gallery
 (function () {
   "use strict";
-  const W = 46,
+  const W = 34,
     H = 12;
 
   const scene = (fill) =>
@@ -53,7 +53,7 @@
       const g = scene();
       if (o.extras) o.extras(g, t);
       const fr = frames[Math.floor(t / hold) % frames.length];
-      const x = Math.floor((W - artW(fr)) / 2);
+      const x = 2;
       const y =
         Math.floor((H - fr.length) / 2) + Math.round(Math.sin(t / 7) * amp);
       draw(g, fr, x, y);
@@ -194,12 +194,12 @@
     return function (t) {
       const g = scene();
       const y = 5 - (Math.floor(t / 2) % 8);
-      draw(g, body, 18, y);
-      draw(g, flames[Math.floor(t / 2) % 2], 18, y + 6);
+      draw(g, body, 8, y);
+      draw(g, flames[Math.floor(t / 2) % 2], 8, y + 6);
       // exhaust smoke below
       for (let i = 0; i < 4; i++) {
         const sy = y + 8 + i;
-        if (sy >= 0 && sy < H) g[sy][20 + (i % 2)] = i % 2 ? "." : ":";
+        if (sy >= 0 && sy < H) g[sy][10 + (i % 2)] = i % 2 ? "." : ":";
       }
       return toStr(g);
     };
