@@ -10,7 +10,7 @@
   const promptText = ">";
 
   const resumeUrl =
-    "https://drive.google.com/file/d/1pjBGBpr7HmEgBGypFNRuDYdV3TAIpI7C/view?usp=sharing";
+    "https://drive.google.com/file/d/1Yu9lGf-LSaMgSLvGtbvt11HJ2BotIngl/view?usp=sharing";
   const githubUrl = "https://github.com/rishinaren";
   const email = "rnarendran3@gatech.edu";
   const phoneDisplay = "(678) 756-7718";
